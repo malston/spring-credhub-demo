@@ -10,8 +10,11 @@ $ cf push -f manifest.yml
 After deploying the application, send an HTTP request to the demo application with this command:
 
 ----
-$ curl -X POST https://spring-credhub-demo.cf.example.com/test -d @demo.json -H "Content-type: application/json"
+$ curl https://spring-credhub-demo.cf.example.com/credhub
 ----
 
-The application will write, retrieve, and delete a set of JSON credentials in CredHub and show the results of each request.
+The application will retrieve a set of credentials created by the `cf create-service` request, i.e.
 
+```bash
+cf create-service credhub default my-credhub-instance -c '{"name":"MY_CREDHUB_CRED","value":"ABCDEFGHIJK123456789"}
+```
