@@ -46,214 +46,225 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class CredHubDemoController {
-	private static final String APP_GUID_2 = UUID.randomUUID().toString();
+    private static final String APP_GUID_2 = UUID.randomUUID().toString();
 
-	private CredHubCredentialOperations credentialOperations;
-	private final CredHubPermissionOperations permissionOperations;
-	private final CredHubInterpolationOperations interpolationOperations;
+    private CredHubCredentialOperations credentialOperations;
+    private final CredHubPermissionOperations permissionOperations;
+    private final CredHubInterpolationOperations interpolationOperations;
 
-	public CredHubDemoController(CredHubOperations credHubOperations) {
-		this.credentialOperations = credHubOperations.credentials();
-		this.permissionOperations = credHubOperations.permissions();
-		this.interpolationOperations = credHubOperations.interpolation();
-	}
+    public CredHubDemoController(CredHubOperations credHubOperations) {
+        this.credentialOperations = credHubOperations.credentials();
+        this.permissionOperations = credHubOperations.permissions();
+        this.interpolationOperations = credHubOperations.interpolation();
+    }
 
-	@PostMapping("/test")
-	public Results runTests(@RequestBody Map<String, Object> value) {
-		Results results = new Results();
+    @PostMapping("/test")
+    public Results runTests(@RequestBody Map<String, Object> value) {
+        Results results = new Results();
 
-		try {
-			SimpleCredentialName credentialName =
-					new SimpleCredentialName( "MY_CREDHUB_CRED");
+        try {
+            SimpleCredentialName credentialName =
+                    new SimpleCredentialName("MY_CREDHUB_CRED");
 
-			// CredentialDetails<JsonCredential> credentialDetails =
-			// 		writeCredentials(credentialName, value, results);
+            getCredentialsValueByName(credentialName, results);
 
-			// getCredentialsById(credentialDetails.getId(), results);
+            credentialName = new SimpleCredentialName("spring-credhub", "demo", "credentials_json");
 
-			getCredentialsValueByName(credentialName, results);
+            CredentialDetails<JsonCredential> credentialDetails =
+                    writeCredentials(credentialName, value, results);
 
-			findCredentialsByName(credentialName, results);
+            getCredentialsById(credentialDetails.getId(), results);
 
-//			 findCredentialsByPath("/spring-credhub/demo", results);
+            getCredentialsByName(credentialName, results);
 
-			// getCredentialPermissions(credentialName, results);
+            findCredentialsByName(credentialName, results);
 
-			// addCredentialPermissions(credentialName, results);
+            findCredentialsByPath("/spring-credhub/demo", results);
 
-			// getCredentialPermissions(credentialName, results);
+            getCredentialPermissions(credentialName, results);
 
-			// interpolateServiceData(credentialName, results);
+            addCredentialPermissions(credentialName, results);
 
-			// deleteCredentials(credentialName, results);
-		} catch (Exception e) {
-			saveResults(results, "Exception caught: " + e.getMessage());
-		}
+            getCredentialPermissions(credentialName, results);
 
-		return results;
-	}
+            interpolateServiceData(credentialName, results);
 
-	@GetMapping("/credhub")
-	public String credhub() {
-		System.out.println("------- Start: credhub values ------");
-		String envVar = System.getenv("VCAP_SERVICES");
+            deleteCredentials(credentialName, results);
+        } catch (Exception e) {
+            saveResults(results, "Exception caught: " + e.getMessage());
+        }
 
-		if (envVar == null) {
-			System.out.println("------- End: credhub values ------");
-			return "Env variable 'VCAP_SERVICES' was not found";
-		}
+        return results;
+    }
 
-		//create ObjectMapper instance
-		ObjectMapper objectMapper = new ObjectMapper();
+    @GetMapping("/credhub")
+    public String credhub() {
+        System.out.println("------- Start: credhub values ------");
+        String envVar = System.getenv("VCAP_SERVICES");
 
-		//read envVar file into tree model
-		JsonNode rootNode = null;
-		try {
-			rootNode = objectMapper.readTree(envVar);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+        if (envVar == null) {
+            System.out.println("------- End: credhub values ------");
+            return "Env variable 'VCAP_SERVICES' was not found";
+        }
 
-		//read credentials
-		JsonNode credNode = rootNode.path("credhub").get(0).path("credentials");
+        ObjectMapper objectMapper = new ObjectMapper();
 
-		credNode.elements().forEachRemaining(System.out::println);
+        JsonNode rootNode = null;
+        try {
+            rootNode = objectMapper.readTree(envVar);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-		System.out.println("------- End: credhub values ------");
+        JsonNode credNode = rootNode.path("credhub").get(0).path("credentials");
 
-		return "Credhub successful - see application log";
-	}
+        credNode.elements().forEachRemaining(System.out::println);
 
-	private CredentialDetails<JsonCredential> writeCredentials(SimpleCredentialName name,
-															   Map<String, Object> value,
-															   Results results) {
-		try {
-			JsonCredentialRequest request = JsonCredentialRequest.builder()
-					.name(name)
-					.value(value)
-					.build();
+        System.out.println("------- End: credhub values ------");
 
-			CredentialDetails<JsonCredential> credentialDetails = credentialOperations.write(request);
-			saveResults(results, "Successfully wrote credentials: ", credentialDetails);
+        return "Credhub successful - see application log";
+    }
 
-			return credentialDetails;
-		}
-		catch (Exception e) {
-			saveResults(results, "Error writing credentials: ", e.getMessage());
-			return null;
-		}
-	}
+    private CredentialDetails<JsonCredential> writeCredentials(SimpleCredentialName name,
+                                                               Map<String, Object> value,
+                                                               Results results) {
+        try {
+            JsonCredentialRequest request = JsonCredentialRequest.builder()
+                    .name(name)
+                    .value(value)
+                    .build();
+            System.out.println("Writing request: " + request);
 
-	private void getCredentialsById(String id, Results results) {
-		try {
-			CredentialDetails<JsonCredential> retrievedDetails =
-					credentialOperations.getById(id, JsonCredential.class);
-			saveResults(results, "Successfully retrieved credentials by ID: ", retrievedDetails);
-		} catch (Exception e) {
-			saveResults(results, "Error retrieving credentials by ID: ", e.getMessage());
-		}
-	}
+            CredentialDetails<JsonCredential> credentialDetails = credentialOperations.write(request);
+            saveResults(results, "Successfully wrote credentials: ", credentialDetails);
 
-	private void getCredentialsValueByName(CredentialName name, Results results) {
-		try {
-			CredentialDetails<ValueCredential> retrievedDetails =
-					credentialOperations.getByName(name, ValueCredential.class);
-			saveResults(results, "Successfully retrieved credentials by name: ", retrievedDetails);
-		} catch (Exception e) {
-			saveResults(results, "Error retrieving credentials by name: ", e.getMessage());
-		}
-	}
+            return credentialDetails;
+        } catch (Exception e) {
+            saveResults(results, "Error writing credentials: ", e.getMessage());
+            return null;
+        }
+    }
 
-	private void findCredentialsByName(CredentialName name, Results results) {
-		try {
-			List<CredentialSummary> retrievedDetails = credentialOperations.findByName(name);
-			saveResults(results, "Successfully found credentials by name: ", retrievedDetails);
-		} catch (Exception e) {
-			saveResults(results, "Error finding credentials by name: ", e.getMessage());
-		}
-	}
+    private void getCredentialsById(String id, Results results) {
+        try {
+            CredentialDetails<JsonCredential> retrievedDetails =
+                    credentialOperations.getById(id, JsonCredential.class);
+            saveResults(results, "Successfully retrieved credentials by ID: ", retrievedDetails);
+        } catch (Exception e) {
+            saveResults(results, "Error retrieving credentials by ID: ", e.getMessage());
+        }
+    }
 
-	private void findCredentialsByPath(String path, Results results) {
-		try {
-			List<CredentialSummary> retrievedDetails = credentialOperations.findByPath(path);
-			saveResults(results, "Successfully found credentials by path: ", retrievedDetails);
-		} catch (Exception e) {
-			saveResults(results, "Error finding credentials by path: ", e.getMessage());
-		}
-	}
+    private void getCredentialsByName(CredentialName name, Results results) {
+        try {
+            CredentialDetails<JsonCredential> retrievedDetails =
+                    credentialOperations.getByName(name, JsonCredential.class);
+            saveResults(results, "Successfully retrieved credentials by name: ", retrievedDetails);
+        } catch (Exception e) {
+            saveResults(results, "Error retrieving credentials by name: ", e.getMessage());
+        }
+    }
 
-	private void getCredentialPermissions(CredentialName name, Results results) {
-		try {
-			List<Permission> retrievedDetails = permissionOperations.getPermissions(name);
-			saveResults(results, "Successfully retrieved credential permissions: ", retrievedDetails);
-		} catch (Exception e) {
-			saveResults(results, "Error retrieving credential permissions: ", e.getMessage());
-		}
-	}
+    private void getCredentialsValueByName(CredentialName name, Results results) {
+        try {
+            CredentialDetails<ValueCredential> retrievedDetails =
+                    credentialOperations.getByName(name, ValueCredential.class);
+            saveResults(results, "Successfully retrieved credentials by name: ", retrievedDetails);
+        } catch (Exception e) {
+            saveResults(results, "Error retrieving credentials by name: ", e.getMessage());
+        }
+    }
 
-	private void addCredentialPermissions(CredentialName name, Results results) {
-		try {
-			Permission permission = Permission.builder()
-					.app(APP_GUID_2)
-					.operations(Operation.READ, Operation.WRITE, Operation.DELETE)
-					.build();
+    private void findCredentialsByName(CredentialName name, Results results) {
+        try {
+            List<CredentialSummary> retrievedDetails = credentialOperations.findByName(name);
+            saveResults(results, "Successfully found credentials by name: ", retrievedDetails);
+        } catch (Exception e) {
+            saveResults(results, "Error finding credentials by name: ", e.getMessage());
+        }
+    }
 
-			permissionOperations.addPermissions(name, permission);
-			saveResults(results, "Successfully added permissions");
-		} catch (Exception e) {
-			saveResults(results, "Error adding permission: ", e.getMessage());
-		}
-	}
+    private void findCredentialsByPath(String path, Results results) {
+        try {
+            List<CredentialSummary> retrievedDetails = credentialOperations.findByPath(path);
+            saveResults(results, "Successfully found credentials by path: ", retrievedDetails);
+        } catch (Exception e) {
+            saveResults(results, "Error finding credentials by path: ", e.getMessage());
+        }
+    }
 
-	private void interpolateServiceData(CredentialName name, Results results) {
-		try {
-			ServicesData request = buildServicesData(name.getName());
-			ServicesData interpolatedServiceData = interpolationOperations.interpolateServiceData(request);
-			saveResults(results, "Successfully interpolated service data: ", interpolatedServiceData);
-		} catch (Exception e) {
-			saveResults(results, "Error interpolating service data: ", e.getMessage());
-		}
-	}
+    private void getCredentialPermissions(CredentialName name, Results results) {
+        try {
+            List<Permission> retrievedDetails = permissionOperations.getPermissions(name);
+            saveResults(results, "Successfully retrieved credential permissions: ", retrievedDetails);
+        } catch (Exception e) {
+            saveResults(results, "Error retrieving credential permissions: ", e.getMessage());
+        }
+    }
 
-	private void deleteCredentials(CredentialName name, Results results) {
-		try {
-			credentialOperations.deleteByName(name);
-			saveResults(results, "Successfully deleted credentials");
-		} catch (Exception e) {
-			saveResults(results, "Error deleting credentials by name: ", e.getMessage());
-		}
-	}
+    private void addCredentialPermissions(CredentialName name, Results results) {
+        try {
+            Permission permission = Permission.builder()
+                    .app(APP_GUID_2)
+                    .operations(Operation.READ, Operation.WRITE, Operation.DELETE)
+                    .build();
 
-	private ServicesData buildServicesData(String credHubReferenceName) throws IOException {
-		String vcapServices = "{" +
-				"  \"service-offering\": [" +
-				"   {" +
-				"    \"credentials\": {" +
-				"      \"credhub-ref\": \"((" + credHubReferenceName + "))\"" +
-				"    }," +
-				"    \"label\": \"service-offering\"," +
-				"    \"name\": \"service-instance\"," +
-				"    \"plan\": \"standard\"," +
-				"    \"tags\": [" +
-				"     \"cloud-service\"" +
-				"    ]," +
-				"    \"volume_mounts\": []" +
-				"   }" +
-				"  ]" +
-				"}";
+            permissionOperations.addPermissions(name, permission);
+            saveResults(results, "Successfully added permissions");
+        } catch (Exception e) {
+            saveResults(results, "Error adding permission: ", e.getMessage());
+        }
+    }
 
-		ObjectMapper mapper = new ObjectMapper();
-		return mapper.readValue(vcapServices, ServicesData.class);
-	}
+    private void interpolateServiceData(CredentialName name, Results results) {
+        try {
+            ServicesData request = buildServicesData(name.getName());
+            ServicesData interpolatedServiceData = interpolationOperations.interpolateServiceData(request);
+            saveResults(results, "Successfully interpolated service data: ", interpolatedServiceData);
+        } catch (Exception e) {
+            saveResults(results, "Error interpolating service data: ", e.getMessage());
+        }
+    }
 
-	private void saveResults(Results results, String message) {
-		saveResults(results, message, null);
-	}
+    private void deleteCredentials(CredentialName name, Results results) {
+        try {
+            credentialOperations.deleteByName(name);
+            saveResults(results, "Successfully deleted credentials");
+        } catch (Exception e) {
+            saveResults(results, "Error deleting credentials by name: ", e.getMessage());
+        }
+    }
 
-	private void saveResults(Results results, String message, Object details) {
-		results.add(Collections.singletonMap(message, details));
-	}
+    private ServicesData buildServicesData(String credHubReferenceName) throws IOException {
+        String vcapServices = "{" +
+                "  \"service-offering\": [" +
+                "   {" +
+                "    \"credentials\": {" +
+                "      \"credhub-ref\": \"((" + credHubReferenceName + "))\"" +
+                "    }," +
+                "    \"label\": \"service-offering\"," +
+                "    \"name\": \"service-instance\"," +
+                "    \"plan\": \"standard\"," +
+                "    \"tags\": [" +
+                "     \"cloud-service\"" +
+                "    ]," +
+                "    \"volume_mounts\": []" +
+                "   }" +
+                "  ]" +
+                "}";
 
-	private class Results extends ArrayList<Map<String, Object>> {
-	}
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.readValue(vcapServices, ServicesData.class);
+    }
+
+    private void saveResults(Results results, String message) {
+        saveResults(results, message, null);
+    }
+
+    private void saveResults(Results results, String message, Object details) {
+        results.add(Collections.singletonMap(message, details));
+    }
+
+    private class Results extends ArrayList<Map<String, Object>> {
+    }
 }
