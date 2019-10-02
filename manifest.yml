@@ -1,0 +1,8 @@
+---
+applications:
+- name: spring-credhub-demo-malston
+  memory: 1G
+  path: build/libs/spring-credhub-demo.jar
+  env:
+    SPRING_CREDHUB_URL: https://credhub.service.cf.internal:8844
+
